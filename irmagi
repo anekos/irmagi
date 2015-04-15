@@ -1,0 +1,150 @@
+#!/usr/bin/ruby
+# vim: set fileencoding=utf-8 :
+
+require 'serialport'
+require 'json'
+require 'pathname'
+
+
+class IrMagician
+  def initialize (path)
+    @serial_port = SerialPort.new(path, 9600, 8, 1, 0)
+    @serial_port.read_timeout = 5000
+    skip_banner
+  end
+
+  def capture ()
+    @serial_port.puts('c')
+    response = @serial_port.gets
+    if m = response.match(/\.{3} (\d+)/)
+      m[1].to_i
+    else
+      response
+    end
+  end
+
+  def dump ()
+    @serial_port.puts('i,6')
+    scale = @serial_port.gets.to_i(10)
+
+    @serial_port.puts('i,1')
+    size = @serial_port.gets.to_i(16)
+
+    blocks = size / 64 + 1
+
+    data =
+      blocks.times.map do
+        |block|
+        @serial_port.puts('b,%d' % block)
+        block_size = (block == blocks - 1) ? size % 64 : 64
+        block_size.times.map do
+          |offset|
+          @serial_port.puts('d,%d' % offset)
+          @serial_port.read(2).to_i(16).tap {
+            @serial_port.read(1)
+          }
+        end
+      end
+
+    {'scale' => scale, 'data' => data}
+  end
+
+  def play ()
+    @serial_port.puts('p')
+    @serial_port.gets
+  end
+
+  def record (scale, blocks)
+    size = blocks.map(&:size).inject(&:+)
+
+    @serial_port.puts('n,%d' % size)
+    @serial_port.puts('k,%d' % scale)
+    @serial_port.gets
+
+    blocks.each_with_index do
+      |block, i|
+      @serial_port.puts('b,%d' % i)
+      block.each_with_index do
+        |byte, j|
+        @serial_port.puts('w,%d,%d' % [j, byte])
+      end
+    end
+  end
+
+  def reset (n = 0)
+    @serial_port.puts('r,%d' % n)
+    @serial_port.gets.chomp == 'OK'
+  end
+
+  private
+  def skip_banner
+    before = @serial_port.read_timeout
+    @serial_port.read_timeout = -1 # no wait
+    @serial_port.gets
+    @serial_port.read_timeout = before
+  end
+end
+
+class App
+  IR_MAGI_DIR = Pathname(ENV['HOME']) + '.irmagi'
+
+  def initialize (path, command, file = nil)
+    @irmagi = IrMagician.new(path)
+
+    if file
+      file = IR_MAGI_DIR + "#{file}.json" unless File.exist?(file)
+    end
+
+    case command
+    when 'dump'
+      dump(file)
+    when 'capture'
+      capture(file)
+    when 'play'
+      play(file)
+    when 'record'
+      record(file)
+    when 'list'
+      list
+    when 'reset'
+      reset
+    when 'nop'
+      # DO NOTHING
+    else
+      STDERR.puts('Unknow command: %s' % command)
+    end
+  end
+
+  def list
+    IR_MAGI_DIR.entries.select {|it| (IR_MAGI_DIR + it).file? } .sort.each {|it| puts it.sub_ext('') }
+  end
+
+  def dump (file)
+    json = JSON.pretty_generate(@irmagi.dump)
+    puts(json)
+    File.write(file, json) if file
+  end
+
+  def capture (file)
+    reset
+    puts(@irmagi.capture)
+    dump(file) if file
+  end
+
+  def record (file)
+    reset
+    json = JSON.parse(File.read(file))
+    @irmagi.record(json['scale'], json['data'])
+  end
+
+  def play (file)
+    record(file) if file
+    @irmagi.play()
+  end
+
+  def reset
+    @irmagi.reset()
+  end
+end
+
+App.new(*ARGV)
