@@ -88,12 +88,10 @@ end
 class App
   IR_MAGI_DIR = Pathname(ENV['HOME']) + '.irmagi'
 
-  def initialize (path, command, file = nil)
+  def initialize (path, command, name = nil)
     @irmagi = IrMagician.new(path)
 
-    if file
-      file = IR_MAGI_DIR + "#{file}.json" unless File.exist?(file)
-    end
+    file = IR_MAGI_DIR + "#{name}.json" if name
 
     case command
     when 'dump'
@@ -122,7 +120,11 @@ class App
   def dump (file)
     json = JSON.pretty_generate(@irmagi.dump)
     puts(json)
-    File.write(file, json) if file
+    if file
+      file.parent.mkpath
+      File.write(file, json)
+      puts("Dumped: #{file}")
+    end
   end
 
   def capture (file)
