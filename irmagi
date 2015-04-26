@@ -117,7 +117,7 @@ end
 
 class Server < Sinatra::Base
   get '/' do
-    erb <<-EOT
+    erb(wrap(<<-EOT))
   <ol>
     <% settings.app.profiles.each do|it| %>
       <li><a href="./play/<%= it.to_s %>"><%= it.to_s %></a></li>
@@ -127,8 +127,29 @@ EOT
   end
 
   get '/play/:profile' do
-    settings.app.play(params[:profile])
-    '<a href="../">OK</a>'
+    profile = params[:profile]
+    settings.app.play(profile)
+    wrap(%Q[<a href="../">OK: #{profile}</a>])
+  end
+
+  private
+  def wrap (body)
+    <<-"EOT"
+<html>
+  <head>
+    <title>m4r-f5s-c8r</title>
+    <style type="text/css">
+      .input {
+        width: 100%;
+        font-size: x-large;
+      }
+    </style>
+    <meta name="viewport" content="width=device-width" />
+  </head>
+  <body>
+    #{body}
+  </body>
+EOT
   end
 end
 
