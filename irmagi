@@ -120,7 +120,7 @@ class Server < Sinatra::Base
     erb <<-EOT
   <ol>
     <% settings.app.profiles.each do|it| %>
-      <li><a href="/play/<%= it.to_s %>"><%= it.to_s %></a></li>
+      <li><a href="./play/<%= it.to_s %>"><%= it.to_s %></a></li>
     <% end %>
   </ol>
 EOT
@@ -128,7 +128,7 @@ EOT
 
   get '/play/:profile' do
     settings.app.play(params[:profile])
-    '<a href="../../">OK</a>'
+    '<a href="../">OK</a>'
   end
 end
 
@@ -142,7 +142,7 @@ class App
 
     case command
     when 'server'
-      server
+      server(name)
     when 'dump'
       dump(name)
     when 'capture'
@@ -162,8 +162,9 @@ class App
     end
   end
 
-  def server
+  def server (port)
     Server.set :app, self
+    Server.set :port, port.to_i
     Server.run!
   end
 
