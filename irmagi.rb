@@ -121,12 +121,23 @@ class Profiles < Array
 end
 
 
+class HistoryEntry < Struct.new(:time, :path, :host)
+end
+
+
 class Server < Sinatra::Base
   configure :development do
     register Sinatra::Reloader
   end
 
   enable :sessions
+
+  before do
+    path = request.path_info
+    return if %W[/ /history].include?(path)
+    host = request.env['HTTP_X_FORWARDED_FOR']|| request.host
+    settings.history << HistoryEntry.new(Time.now, path, host)
+  end
 
   get '/' do
     @message = session[:message]
@@ -148,6 +159,10 @@ class Server < Sinatra::Base
     <label>Name: </label><input type="text" name="name" />
     <input type="submit" value="Capture" />
   </form>
+  <h1>Other</h1>
+  <ol>
+    <li><a href="./history">History</a></li>
+  </ol>
 EOT
   end
 
@@ -165,6 +180,19 @@ EOT
     else
       result("Failed: please input name.")
     end
+  end
+
+  get '/history' do
+    erb(wrap(<<-EOT))
+  <h1>History</h1>
+  <dl>
+    <% settings.history.reverse.each do |entry| %>
+      <dt><%= entry.path %></dt>
+      <dd><%= entry.time.strftime('%Y%m%d %H:%M:%S') %> <%= entry.host %></dd>
+    <% end %>
+  </dl>
+  <a href="./">Top</a>
+EOT
   end
 
   get '/api/help' do
@@ -245,6 +273,7 @@ class App
   def server (port)
     Server.set :app, self
     Server.set :port, port.to_i
+    Server.set :history, []
     Server.run!
   end
 
