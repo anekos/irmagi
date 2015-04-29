@@ -6,15 +6,26 @@ require 'json'
 require 'pathname'
 require 'sinatra/base'
 require 'sinatra/reloader'
+require 'time'
 
 
+#
+# シリアル通信で IrMagician をコントロールする
+#
 class IrMagician
+  # @param path [String] デバイスへのパス (/dev/ttyACM0 など)
   def initialize (path)
     @serial_port = SerialPort.new(path, 9600, 8, 1, 0)
     @serial_port.read_timeout = 5000
     skip_banner
   end
 
+  # キャプチャを開始する
+  #
+  # このメソッド呼び出し直後に、IrMagician に向けてリモコンでキャプチャさせたいボタンを押すなどする
+  # キャプチャに成功すると、IrMagician 内にリモコンのデータが記録される
+  #
+  # @return [Fixnum/String] 成功すればキャプチャされてデータのサイズ、失敗時は IrMagician の返した文字列
   def capture ()
     @serial_port.puts('c')
     response = @serial_port.gets
@@ -25,6 +36,11 @@ class IrMagician
     end
   end
 
+  # キャプチャしている内容を Hash で返す
+  #
+  # このデータは、record メソッドなどで仕様できる
+  #
+  # @return [Hash] キャプチャ内容
   def dump ()
     @serial_port.puts('i,6')
     scale = @serial_port.gets.to_i(10)
@@ -51,11 +67,20 @@ class IrMagician
     {'scale' => scale, 'data' => data}
   end
 
+  # IrMagician が現在記録しているデータで、発信する
+  #
+  # 事前に capture か record している必要がある
   def play ()
     @serial_port.puts('p')
     @serial_port.gets
   end
 
+  # 発信内容を記録する
+  #
+  # capture -> dump で得られたデータをそのまま用いれば良い
+  #
+  # @param scale [Fixnum]
+  # @param blocks [Array] 二次元配列
   def record (scale, blocks)
     size = blocks.map(&:size).inject(&:+)
 
@@ -73,6 +98,11 @@ class IrMagician
     end
   end
 
+  # IrMagician をリセットする
+  #
+  # どういう効果だったか忘れた
+  #
+  # @param n [Fixnum] 0 か 1 のはず
   def reset (n = 0)
     @serial_port.puts('r,%d' % n)
     @serial_port.gets.chomp == 'OK'
