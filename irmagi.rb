@@ -167,6 +167,23 @@ EOT
     end
   end
 
+  get '/api/help' do
+    return <<-EOT
+/api/profiles
+/api/profiles/:profiles/play
+EOT
+  end
+
+  get '/api/profiles' do
+    settings.app.profiles.join("\n") + "\n"
+  end
+
+  get '/api/:profile/play' do
+    profile = params[:profile]
+    settings.app.play(profile)
+    "OK: #{profile}"
+  end
+
   def result (message)
     session[:message] = message
     redirect to('./')
