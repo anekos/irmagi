@@ -93,6 +93,11 @@ class Profiles < Array
 
   def initialize
     super
+    update
+  end
+
+  def update
+    clear
     IR_MAGI_DIR.entries.select {|it| (IR_MAGI_DIR + it).file? } .sort.map {|it| it.sub_ext('') }.each { |it|
       self << it
     }
@@ -129,20 +134,41 @@ class Server < Sinatra::Base
 
     erb(wrap(<<-EOT))
   <% if @message %>
+    <h1>Result</h1>
     <%= @message %>
   <% end %>
+  <h1>Play</h1>
   <ol>
     <% settings.app.profiles.each do|it| %>
       <li><a href="./play/<%= it.to_s %>"><%= it.to_s %></a></li>
     <% end %>
   </ol>
+  <h1>Capture</h1>
+  <form action="/capture" method="POST">
+    <label>Name: </label><input type="text" name="name" />
+    <input type="submit" value="Capture" />
+  </form>
 EOT
   end
 
   get '/play/:profile' do
     profile = params[:profile]
     settings.app.play(profile)
-    session[:message] = "OK: #{profile}"
+    result("OK: #{profile}")
+  end
+
+  post '/capture' do
+    name = params[:name]
+    if name and !name.empty?
+      settings.app.capture(name)
+      result("Captured: #{name}")
+    else
+      result("Failed: please input name.")
+    end
+  end
+
+  def result (message)
+    session[:message] = message
     redirect to('/')
   end
 
@@ -223,6 +249,7 @@ class App
     reset
     puts(@irmagi.capture)
     dump(name) if name
+    @profiles.update
   end
 
   def record (name)
