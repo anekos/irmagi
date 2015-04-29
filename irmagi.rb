@@ -121,8 +121,16 @@ class Server < Sinatra::Base
     register Sinatra::Reloader
   end
 
+  enable :sessions
+
   get '/' do
+    @message = session[:message]
+    session[:message] = nil
+
     erb(wrap(<<-EOT))
+  <% if @message %>
+    <%= @message %>
+  <% end %>
   <ol>
     <% settings.app.profiles.each do|it| %>
       <li><a href="./play/<%= it.to_s %>"><%= it.to_s %></a></li>
@@ -134,7 +142,8 @@ EOT
   get '/play/:profile' do
     profile = params[:profile]
     settings.app.play(profile)
-    wrap(%Q[<a href="../">OK: #{profile}</a>])
+    session[:message] = "OK: #{profile}"
+    redirect to('/')
   end
 
   private
