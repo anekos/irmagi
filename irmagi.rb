@@ -140,6 +140,7 @@ EOT
   private
   def wrap (body)
     <<-"EOT"
+<!DOCTYPE html>
 <html>
   <head>
     <title>irmagi</title>
@@ -154,6 +155,7 @@ EOT
   <body>
     #{body}
   </body>
+</html>
 EOT
   end
 end
