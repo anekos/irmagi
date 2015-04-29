@@ -144,7 +144,7 @@ class Server < Sinatra::Base
     <% end %>
   </ol>
   <h1>Capture</h1>
-  <form action="/capture" method="POST">
+  <form action="./capture" method="POST">
     <label>Name: </label><input type="text" name="name" />
     <input type="submit" value="Capture" />
   </form>
@@ -169,7 +169,7 @@ EOT
 
   def result (message)
     session[:message] = message
-    redirect to('/')
+    redirect to('./')
   end
 
   private
