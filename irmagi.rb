@@ -25,14 +25,14 @@ class IrMagician
   # このメソッド呼び出し直後に、IrMagician に向けてリモコンでキャプチャさせたいボタンを押すなどする
   # キャプチャに成功すると、IrMagician 内にリモコンのデータが記録される
   #
-  # @return [Fixnum/String] 成功すればキャプチャされてデータのサイズ、失敗時は IrMagician の返した文字列
+  # @return [Array] [成否, キャプチャサイズ/エラーメッセージ] な 2要素の配列
   def capture ()
     @serial_port.puts('c')
     response = @serial_port.gets
     if m = response.match(/\.{3} (\d+)/)
-      m[1].to_i
+      [true, m[1].to_i]
     else
-      response
+      [false, response]
     end
   end
 
@@ -205,8 +205,12 @@ EOT
   post '/capture' do
     name = params[:name]
     if name and !name.empty?
-      settings.app.capture(name)
-      result("Captured: #{name}")
+      ok, code = settings.app.capture(name)
+      if ok
+        result("Captured: #{name}")
+      else
+        result("Failed: #{code}")
+      end
     else
       result("Failed: please input name.")
     end
