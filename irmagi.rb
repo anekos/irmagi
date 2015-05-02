@@ -15,9 +15,28 @@ require 'time'
 class IrMagician
   # @param path [String] デバイスへのパス (/dev/ttyACM0 など)
   def initialize (path)
-    @serial_port = SerialPort.new(path, 9600, 8, 1, 0)
+    @path = path
+    reopen
+  end
+
+  # 再接続
+  def reopen
+    @serial_port = SerialPort.new(@path, 9600, 8, 1, 0)
     @serial_port.read_timeout = 5000
     skip_banner
+  end
+
+  # 自動的にリトライ付きで実行する
+  #
+  # @param block [Proc] 実行するブロック
+  def automatic_retry (&block)
+    begin
+      block.call
+    rescue
+      sleep(1)
+      reopen
+      block.call
+    end
   end
 
   # キャプチャを開始する
@@ -279,7 +298,7 @@ class App
   attr_reader :profiles
 
   def initialize (path, command, name = nil)
-    @irmagi = IrMagician.new(path)
+    @path = path
     @profiles = Profiles.new
 
     case command
@@ -304,6 +323,10 @@ class App
     end
   end
 
+  def irmagi
+    @irmagi = @irmagi || IrMagician.new(@path)
+  end
+
   def server (port)
     Server.set :app, self
     Server.set :port, port.to_i
@@ -312,39 +335,45 @@ class App
   end
 
   def list
-    @profiles.each {|it| puts(it) }
+    @profiles.each {|it| STDOUT.puts(it) }
   end
 
   def dump (name)
-    dumped = @irmagi.dump
+    dumped = irmagi.automatic_retry { irmagi.dump }
     json_text = JSON.pretty_generate(dumped)
-    puts(json_text)
     if name
       file = @profiles.write(name, dumped)
-      puts("Dumped: #{file}")
+      STDOUT.puts("Dumped: #{file}")
+    else
+      STDOUT.puts(json_text)
     end
   end
 
   def capture (name)
     reset
-    puts(@irmagi.capture)
-    dump(name) if name
-    @profiles.update
+    ok, size = irmagi.capture
+    if ok
+      STDOUT.puts("OK: #{size} bytes")
+      dump(name) if name
+      @profiles.update
+    else
+      STDERR.puts("Fail: #{size}")
+    end
   end
 
   def record (name)
     reset
     json = @profiles.read(name)
-    @irmagi.record(json['scale'], json['data'])
+    irmagi.record(json['scale'], json['data'])
   end
 
   def play (name)
     record(name) if name
-    @irmagi.play()
+    irmagi.play()
   end
 
   def reset
-    @irmagi.reset()
+    irmagi.reset()
   end
 end
 
