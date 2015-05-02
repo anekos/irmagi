@@ -1,4 +1,4 @@
 #!/bin/bash
 
 cd "$(dirname $0)"
-RACK_ENV=production bundle exec ./irmagi.rb /dev/ttyACM0 "$@"
+RACK_ENV=production bundle exec ./irmagi.rb "$@"
