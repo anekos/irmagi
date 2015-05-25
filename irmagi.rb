@@ -364,16 +364,18 @@ class App
   def record (name)
     reset
     json = @profiles.read(name)
-    irmagi.record(json['scale'], json['data'])
+    irmagi.automatic_retry {
+      irmagi.record(json['scale'], json['data'])
+    }
   end
 
   def play (name)
     record(name) if name
-    irmagi.play()
+    irmagi.automatic_retry { irmagi.play() }
   end
 
   def reset
-    irmagi.reset()
+    irmagi.automatic_retry { irmagi.reset() }
   end
 end
 
