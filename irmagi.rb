@@ -380,4 +380,10 @@ class App
 end
 
 
-App.new(*ARGV)
+if ARGV.empty?
+  puts(<<EOT)
+irmagi <DEV_PATH> <SUB_COMMAND>
+EOT
+else
+  App.new(*ARGV)
+end
