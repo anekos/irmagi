@@ -351,6 +351,7 @@ class App
 
   def capture (name)
     reset
+    STDOUT.puts("Please IR me")
     ok, size = irmagi.capture
     if ok
       STDOUT.puts("OK: #{size} bytes")
