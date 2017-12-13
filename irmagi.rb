@@ -267,7 +267,7 @@ EOT
 
   def result (message)
     session[:message] = message
-    redirect to('./')
+    redirect to('/')
   end
 
   private
