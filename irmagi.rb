@@ -264,7 +264,7 @@ EOT
     profiles.split(/,/).each do |profile|
       settings.app.play(profile)
     end
-    "OK: #{profile}"
+    "OK: #{profiles.join(',')}"
   end
 
   def result (message)
