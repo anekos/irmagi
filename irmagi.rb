@@ -263,6 +263,7 @@ EOT
     profiles = params[:profiles]
     profiles.split(/,/).each do |profile|
       settings.app.play(profile)
+      sleep 2
     end
     "OK: #{profiles}"
   end
