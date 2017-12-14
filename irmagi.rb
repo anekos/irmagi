@@ -259,9 +259,11 @@ EOT
     settings.app.profiles.join("\n") + "\n"
   end
 
-  get '/api/:profile/play' do
-    profile = params[:profile]
-    settings.app.play(profile)
+  get '/api/:profiles/play' do
+    profiles = params[:profiles]
+    profiles.split(/,/).each do |profile|
+      settings.app.play(profile)
+    end
     "OK: #{profile}"
   end
 
